@@ -1,3 +1,4 @@
+;; -*-lisp-*-
 (
  :asserts
  :nil-false-empty
@@ -26,5 +27,6 @@
  :dice-project
  :macros
  :scope-and-extent
- #+sb-thread :threads
+ #+sb-thread :sbcl-threads
+ #+openmcl-native-threads :ccl-threads
 )

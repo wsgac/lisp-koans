@@ -47,8 +47,8 @@
 
 
 ;; Global state used to hold results of loading and processing koans
-(defvar *n-total-koans* 0)
-(defvar *collected-results* nil)
+(defparameter *n-total-koans* 0)
+(defparameter *collected-results* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Functions for loading koans ;;
