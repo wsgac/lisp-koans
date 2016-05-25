@@ -39,209 +39,216 @@
   (assert-equal *greeting* "no greeting")
   (let ((greeting-thread
 	 (ccl:process-run-function
-	  "greeting"
+	  nil
 	  (lambda ()
 	    (setf *greeting* "hello world")))))
     (ccl:join-process greeting-thread)
     (assert-equal *greeting* ____)
     (setf greeting-thread
-	  (ccl:process-run-function "greeting" #'sets-socal-greeting))
+	  (ccl:process-run-function nil #'sets-socal-greeting))
     (ccl:join-process greeting-thread)
     (assert-equal *greeting* ____)))
 
 
-;; (define-test test-join-thread-return-value
-;;     "the return value of the thread is passed in sb-thread:join-thread"
-;;   (let ((my-thread (sb-thread:make-thread
-;;                     (lambda () (* 11 99)))))
-;;     (assert-equal ____ (sb-thread:join-thread my-thread))))
+(define-test test-join-thread-return-value
+    "the return value of the thread is passed in ccl:join-process"
+    (let ((my-thread (ccl:process-run-function
+		      nil
+		      (lambda () (* 11 99)))))
+    (assert-equal ____ (ccl:join-process my-thread))))
 
 
-;; (define-test test-threads-can-have-names
-;;     "Threads can have names.  Names can be useful in diagnosing problems
-;;      or reporting."
-;;   (let ((empty-plus-thread
-;;          (sb-thread:make-thread #'+
-;;                                 :name "what is the sum of no things adding?")))
-;;     (assert-equal (sb-thread:thread-name empty-plus-thread)
-;;                   ____)))
+(define-test test-threads-can-have-names
+    "Threads can have names.  Names can be useful in diagnosing problems
+     or reporting."
+  (let ((empty-plus-thread
+         (ccl:process-run-function
+	  "what is the sum of no things adding?" #'+)))
+    (assert-equal (ccl:process-name empty-plus-thread)
+                  ____)))
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; Sending arguments to the thread function: ;;
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Sending arguments to the thread function: ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (defun returns-hello-name (name)
-;;   (format nil "Hello, ~a" name))
+(defun returns-hello-name (name)
+  (format nil "Hello, ~a" name))
 
-;; (defun double-wrap-list (x y z)
-;;   (list (list x y z)))
+(defun double-wrap-list (x y z)
+  (list (list x y z)))
 
-;; ;; Create a thread which will return "Hello -Name-" using
-;; ;; the named returns-hello-name function.   Arguments are handed
-;; ;; to threads as a list, unless there is just a single argument
-;; ;; then it does not need to be wrapped in a list.
+;; Create a thread which will return "Hello -Name-" using
+;; the named returns-hello-name function.   Arguments are handed
+;; to threads as a list, unless there is just a single argument
+;; then it does not need to be wrapped in a list.
 
-;; (define-test test-sending-arguments-to-thread
-;;     (assert-equal "Hello, Buster" 
-;;                   (sb-thread:join-thread
-;;                    (sb-thread:make-thread 'returns-hello-name
-;;                                           :arguments "Buster")))
-;;     (assert-equal ____
-;;                   (sb-thread:join-thread
-;;                    (sb-thread:make-thread 'double-wrap-list
-;;                                           :arguments '(3 4 5)))))
-
-
-;; ;; ----
-
-;; (defvar *accum* 0)
-
-;; (defun accum-after-time (time arg1)
-;;     "sleeps for time seconds and then adds arg1 to *accum*"
-;;   (sleep time)
-;;   (incf *accum* arg1))
-
-;; (defvar *before-time-millisec* 0)
-;; (defvar *after-time-millisec* 0)
-
-;; ;; cheap and dirty time measuring function
-;; (defun duration-ms ()
-;;   (- *after-time-millisec* *before-time-millisec*))
-
-;; (define-test test-run-in-series
-;;     "get internal real time returns a time stamp in milliseconds"
-;;   (setf *accum* 0)
-;;   (setf *before-time-millisec* (get-internal-real-time))
-;;   (accum-after-time 0.3 1)
-;;   (accum-after-time 0.2 2)
-;;   (accum-after-time 0.1 4)
-;;   (setf *after-time-millisec* (get-internal-real-time))
-;;   (true-or-false? ___ (> (duration-ms) 500))
-;;   (true-or-false? ___ (< (duration-ms) 700))
-;;   (assert-equal *accum* ___))
-
-;; (define-test test-run-in-parallel
-;;     "same program as above, executed in threads.  Sleeps are simultaneous"
-;;   (setf *accum* 0)
-;;   (setf *before-time-millisec* (get-internal-real-time))
-;;   (let ((thread-1 (sb-thread:make-thread 'accum-after-time :arguments '(0.3 1)))
-;;         (thread-2 (sb-thread:make-thread 'accum-after-time :arguments '(0.2 2)))
-;;         (thread-3 (sb-thread:make-thread 'accum-after-time :arguments '(0.1 4))))
-;;     (sb-thread:join-thread thread-1)
-;;     (sb-thread:join-thread thread-2)
-;;     (sb-thread:join-thread thread-3))
-;;   (setf *after-time-millisec* (get-internal-real-time))
-;;   (true-or-false? ___ (> (duration-ms) 200))
-;;   (true-or-false? ___  (< (duration-ms) 400))
-;;   (assert-equal *accum* ___))
+(define-test test-sending-arguments-to-thread
+    (assert-equal "Hello, Buster" 
+                  (ccl:join-process
+                   (ccl:process-run-function nil
+					     'returns-hello-name
+					     "Buster")))
+    (assert-equal ____
+                  (ccl:join-process
+                   (ccl:process-run-function nil
+					     'double-wrap-list
+					     3 4 5))))
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; killing renegade threads            ;;
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ----
+
+(defvar *accum* 0)
+
+(defun accum-after-time (time arg1)
+  "sleeps for time seconds and then adds arg1 to *accum*"
+    (sleep time)
+    (incf *accum* arg1))
+
+(defvar *before-time-millisec* 0)
+(defvar *after-time-millisec* 0)
+
+;; cheap and dirty time measuring function
+(defun duration-ms ()
+  (- *after-time-millisec* *before-time-millisec*))
+
+(defun get-internal-real-time-ms ()
+  (truncate (get-internal-real-time) 1000))
+
+(define-test test-run-in-series
+    "get internal real time returns a time stamp in milliseconds"
+  (setf *accum* 0)
+  (setf *before-time-millisec* (get-internal-real-time-ms))
+  (accum-after-time 0.3 1)
+  (accum-after-time 0.2 2)
+  (accum-after-time 0.1 4)
+  (setf *after-time-millisec* (get-internal-real-time-ms))
+  (print (duration-ms))
+  (true-or-false? ___ (> (duration-ms) 500))
+  (true-or-false? ___ (< (duration-ms) 700))
+  (assert-equal *accum* ___))
+
+(define-test test-run-in-parallel
+  "same program as above, executed in threads.  Sleeps are simultaneous"
+  (setf *accum* 0)
+  (setf *before-time-millisec* (get-internal-real-time-ms))
+  (let ((thread-1 (ccl:process-run-function nil 'accum-after-time 0.3 1))
+        (thread-2 (ccl:process-run-function nil 'accum-after-time 0.2 2))
+        (thread-3 (ccl:process-run-function nil 'accum-after-time 0.1 4)))
+    (ccl:join-process thread-1)
+    (ccl:join-process thread-2)
+    (ccl:join-process thread-3))
+  (setf *after-time-millisec* (get-internal-real-time-ms))
+  (true-or-false? ___ (> (duration-ms) 200))
+  (true-or-false? ___  (< (duration-ms) 400))
+  (assert-equal *accum* ___))
 
 
-;; (defun spawn-looping-thread (name)
-;;   "create a never-ending looping thread with a given name"
-;;   (sb-thread:make-thread (lambda () (loop)) :name name))
-
-;; (defvar *top-thread* sb-thread:*current-thread*)
-;; (defun main-thread-p (thread) (eq thread *top-thread*))
-
-;; (defun kill-thread-if-not-main (thread)
-;; " kills a given thread, unless the thread is the main thread.
-;;  returns nil if thread is main.
-;;  returns a 'terminated~' string otherwise"
-;;   (unless (main-thread-p thread)
-;;     (sb-thread:terminate-thread thread)
-;;     (concatenate 'string "terminated " (sb-thread:thread-name thread))))
-
-;; (defun kill-spawned-threads ()
-;;   "kill all lisp threads except the main thread."
-;;   (map 'list 'kill-thread-if-not-main (sb-thread:list-all-threads)))
-
-;; (defun spawn-three-loopers ()
-;;   "Spawn three run-aways."
-;;   (progn
-;;     (spawn-looping-thread "looper one")
-;;     (spawn-looping-thread "looper two")
-;;     (spawn-looping-thread "looper three")))
-
-;; (define-test test-counting-and-killing-threads
-;;     "list-all-threads makes a list of all running threads in this lisp.  The sleep
-;;      calls are necessary, as killed threads are not instantly removed from the
-;;      list of all running threads."
-;;   (assert-equal ___ (length (sb-thread:list-all-threads)))
-;;   (kill-thread-if-not-main (spawn-looping-thread "NEVER CATCH ME~!  NYA NYA!"))
-;;   (sleep 0.01)
-;;   (assert-equal ___ (length (sb-thread:list-all-threads)))
-;;   (spawn-three-loopers)
-;;   (assert-equal ___ (length (sb-thread:list-all-threads)))
-;;   (kill-spawned-threads)
-;;   (sleep 0.01)
-;;   (assert-equal ___ (length (sb-thread:list-all-threads))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; killing renegade threads            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; bindings are not inherited across threads ;;
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun spawn-looping-thread (name)
+  "create a never-ending looping thread with a given name"
+  (ccl:process-run-function name (lambda () (loop))))
 
-;; (defvar *v* 0)
+(defvar *top-thread* ccl:*current-process*)
+(defun main-thread-p (thread) (eq thread *top-thread*))
 
-;; (defun returns-v ()
-;;   *v*)
+(defun kill-thread-if-not-main (thread)
+  "kills a given thread, unless the thread is the main thread.
+   returns nil if thread is main.
+   returns a 'terminated~' string otherwise"
+  (unless (main-thread-p thread)
+    (ccl:process-kill thread)
+    (concatenate 'string "terminated " (ccl:process-name thread))))
 
-;; (define-test test-threads-dont-get-bindings
-;;     "bindings are not inherited across threads"
-;;   (let ((thread-ret-val (sb-thread:join-thread
-;;                          (sb-thread:make-thread 'returns-v))))
-;;     (assert-equal thread-ret-val ____))
-;;   (let ((*v* "LEXICAL BOUND VALUE"))
-;;     (assert-equal *v* ____)
-;;     (let ((thread-ret-val (sb-thread:join-thread
-;;                            (sb-thread:make-thread 'returns-v))))
-;;       (assert-equal thread-ret-val ____))))
+(defun kill-spawned-threads ()
+  "kill all lisp threads except the main thread."
+  (map 'list 'kill-thread-if-not-main (ccl:all-processes)))
 
+(defun spawn-three-loopers ()
+  "Spawn three run-aways."
+  (progn
+    (spawn-looping-thread "looper one")
+    (spawn-looping-thread "looper two")
+    (spawn-looping-thread "looper three")))
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; global state (special vars) are ;;
-;; ;; shared across threads           ;;
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; (defvar *g* 0)
-
-;; (defun waits-and-increments-g (&optional (n 0.2))
-;;   "sets *g* to 1 + the value of *g* n seconds ago"
-;;   (let ((my-remembered-g *g*))
-;;     (sleep n)
-;;     (setq *g* (+ 1 my-remembered-g))))
-
-;; (define-test test-serial-wait-and-increment
-;;  "incrementing *g* three times and expecting
-;;   the final value to be three works."
-;;   (setf *g* 0)
-;;   (waits-and-increments-g)
-;;   (waits-and-increments-g)
-;;   (waits-and-increments-g)
-;;   (assert-equal *g* ___))
+(define-test test-counting-and-killing-threads
+    "list-all-threads makes a list of all running threads in this lisp.  The sleep
+     calls are necessary, as killed threads are not instantly removed from the
+     list of all running threads."
+  (assert-equal ___ (length (ccl:all-processes)))
+  (kill-thread-if-not-main (spawn-looping-thread "NEVER CATCH ME~!  NYA NYA!"))
+  (sleep 0.01)
+  (assert-equal ___ (length (ccl:all-processes)))
+  (spawn-three-loopers)
+  (assert-equal ___ (length (ccl:all-processes)))
+  (kill-spawned-threads)
+  (sleep 0.01)
+  (assert-equal ___ (length (ccl:all-processes))))
 
 
-;; (define-test test-parallel-wait-and-increment
-;;     (setf *g* 0)
-;;   (let ((thread-1 (sb-thread:make-thread 'waits-and-increments-g))
-;;         (thread-2 (sb-thread:make-thread 'waits-and-increments-g))
-;;         (thread-3 (sb-thread:make-thread 'waits-and-increments-g)))
-;;     (sb-thread:join-thread thread-1)
-;;     (sb-thread:join-thread thread-2)
-;;     (sb-thread:join-thread thread-3)
-;;     (assert-equal *g* ___)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; bindings are not inherited across threads ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar *v* 0)
+
+(defun returns-v ()
+  *v*)
+
+(define-test test-threads-dont-get-bindings
+  "bindings are not inherited across threads"
+  (let ((thread-ret-val (ccl:join-process
+                         (ccl:process-run-function nil 'returns-v))))
+    (assert-equal thread-ret-val ____))
+  (let ((*v* "LEXICAL BOUND VALUE"))
+    (assert-equal *v* ____)
+    (let ((thread-ret-val (ccl:join-process
+                           (ccl:process-run-function nil 'returns-v))))
+      (assert-equal thread-ret-val ____))))
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; Global state can be protected ;;
-;; ;; with a mutex.                 ;;
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global state (special vars) are ;;
+;; shared across threads           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar *g* 0)
+
+(defun waits-and-increments-g (&optional (n 0.2))
+  "sets *g* to 1 + the value of *g* n seconds ago"
+  (let ((my-remembered-g *g*))
+    (sleep n)
+    (setq *g* (+ 1 my-remembered-g))))
+
+(define-test test-serial-wait-and-increment
+  "incrementing *g* three times and expecting
+  the final value to be three works."
+  (setf *g* 0)
+  (waits-and-increments-g)
+  (waits-and-increments-g)
+  (waits-and-increments-g)
+  (assert-equal *g* ___))
+
+
+(define-test test-parallel-wait-and-increment
+  (setf *g* 0)
+  (let ((thread-1 (ccl:process-run-function nil 'waits-and-increments-g))
+        (thread-2 (ccl:process-run-function nil 'waits-and-increments-g))
+        (thread-3 (ccl:process-run-function nil 'waits-and-increments-g)))
+    (ccl:join-process thread-1)
+    (ccl:join-process thread-2)
+    (ccl:join-process thread-3)
+    (assert-equal *g* ____)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Global state can be protected ;;
+;; with a mutex.                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; (setf *g* 0)
 ;; (defvar *gs-mutex* (sb-thread:make-mutex :name "g's lock"))
