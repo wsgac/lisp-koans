@@ -1,4 +1,4 @@
-;;   Copyright 2013 Google Inc.
+;;   Copyright 2016 Wojciech Gac
 ;;
 ;;   Licensed under the Apache License, Version 2.0 (the "License");
 ;;   you may not use this file except in compliance with the License.
@@ -12,17 +12,17 @@
 ;;   See the License for the specific language governing permissions and
 ;;   limitations under the License.
 
-;; NOTE: This koan group uses language features specific to sbcl, that are 
-;; not part of the Common Lisp specification.  If you are not using sbcl, 
+;; NOTE: This koan group uses language features specific to CCL, that are
+;; not part of the Common Lisp specification.  If you are not using CCL,
 ;; feel free to skip this group by removing it from '.koans'
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Making threads with sb-thread:make-thread  ;;
-;; Joining threads with sb-thread:join-thread ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Making threads with ccl:process-run-function ;;
+;; Joining threads with ccl:join-process        ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; sb-thread takes a -function- as a parameter.
-;; This function will be executed in a separate thread.
+;; ccl:process-run-function takes a name and a function as parameters.
+;; The function will be executed in a separate thread.
 
 ;; Since the execution order of separate threads is not guaranteed,
 ;; we must -join- the threads in order to make our assertions.
@@ -144,9 +144,9 @@
   (assert-equal *accum* ___))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; killing renegade threads            ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; killing renegade threads ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defun spawn-looping-thread (name)
@@ -250,46 +250,50 @@
 ;; with a mutex.                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (setf *g* 0)
-;; (defvar *gs-mutex* (sb-thread:make-mutex :name "g's lock"))
+(setf *g* 0)
+(defvar *gs-lock* (ccl:make-lock "g's lock"))
 
-;; (defun protected-increments-g (&optional (n 0.1))
-;;   "Surround all references to *g* within the with-mutex form."
-;;   (sb-thread:with-mutex (*gs-mutex*)
-;;     (let ((my-remembered-g *g*))
-;;       (sleep n)
-;;       (setq *g* (+ 1 my-remembered-g)))))
+(defun protected-increments-g (&optional (n 0.1))
+  "Surround all references to *g* within the with-mutex form."
+  (ccl:with-lock-grabbed (*gs-lock*)
+    (let ((my-remembered-g *g*))
+      (sleep n)
+      (setq *g* (+ 1 my-remembered-g)))))
 
-;; (define-test test-parallel-wait-and-increment-with-mutex
-;;     (setf *g* 0)
-;;   (let ((thread-1 (sb-thread:make-thread 'protected-increments-g))
-;;         (thread-2 (sb-thread:make-thread 'protected-increments-g))
-;;         (thread-3 (sb-thread:make-thread 'protected-increments-g)))
-;;     (sb-thread:join-thread thread-1)
-;;     (sb-thread:join-thread thread-2)
-;;     (sb-thread:join-thread thread-3)
-;;     (assert-equal *g* ___)))
+(define-test test-parallel-wait-and-increment-with-mutex
+    (setf *g* 0)
+  (let ((thread-1 (ccl:process-run-function nil 'protected-increments-g))
+        (thread-2 (ccl:process-run-function nil 'protected-increments-g))
+        (thread-3 (ccl:process-run-function nil 'protected-increments-g)))
+    (ccl:join-process thread-1)
+    (ccl:join-process thread-2)
+    (ccl:join-process thread-3)
+    (assert-equal *g* ___)))
 
-;; ;;;;;;;;;;;;;;;;
-;; ;; Semaphores ;;
-;; ;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;
+;; Semaphores ;;
+;;;;;;;;;;;;;;;;
 
-;; ;; Incrementing a semaphore is an atomic operation.
-;; (defvar *g-semaphore* (sb-thread:make-semaphore :name "g" :count 0))
+;; Incrementing a semaphore is an atomic operation.
+(defvar *g-semaphore* (ccl:make-semaphore))
 
-;; (defun semaphore-increments-g ()
-;;   (sb-thread:signal-semaphore *g-semaphore*))
+(defun semaphore-increments-g ()
+  (ccl:signal-semaphore *g-semaphore*))
+
+;; TODO: Since I cannot find any way to actually get the value of the
+;; semaphore counter, I need to find some alternative for the following
+;; part. Leaving it commented for now.
 
 ;; (define-test test-increment-semaphore
-;;     (assert-equal 0 (sb-thread:semaphore-count *g-semaphore*))
-;;   (sb-thread:join-thread (sb-thread:make-thread 'semaphore-increments-g :name "S incrementor 1"))
-;;   (sb-thread:join-thread (sb-thread:make-thread 'semaphore-increments-g :name "S incrementor 2"))
-;;   (sb-thread:join-thread (sb-thread:make-thread 'semaphore-increments-g :name "S incrementor 3"))
+;;   (assert-equal 0 (sb-thread:semaphore-count *g-semaphore*))
+;;   (ccl:join-process (ccl:process-run-function "S incrementor 1" 'semaphore-increments-g))
+;;   (ccl:join-process (ccl:process-run-function "S incrementor 2" 'semaphore-increments-g))
+;;   (ccl:join-process (ccl:process-run-function "S incrementor 3" 'semaphore-increments-g))
 ;;   (assert-equal ___ (sb-thread:semaphore-count *g-semaphore*)))
 
 
-;; ;; Semaphores can be used to manage resource allocation, and to trigger
-;; ;; threads to run when the semaphore value is above zero.
+;; Semaphores can be used to manage resource allocation, and to trigger
+;; threads to run when the semaphore value is above zero.
 
 ;; (defvar *apples* (sb-thread:make-semaphore :name "how many apples" :count 0))
 ;; (defvar *orchard-log* (make-array 10))
